@@ -1,0 +1,240 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sharp Sports Zone</title>
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+<style>
+:root { --primary:#0070f3; --dark:#050505; --glass:rgba(255,255,255,0.06); --wa:#25D366; }
+
+body { margin:0; background:var(--dark); color:#fff; font-family:sans-serif; padding-bottom:120px; }
+
+/* NAV */
+nav {
+position:fixed; top:0; width:100%; z-index:1000;
+background:#000; padding:10px;
+display:flex; justify-content:space-between;
+backdrop-filter:blur(10px);
+-webkit-backdrop-filter:blur(10px);
+}
+
+.nav-links a { color:#888; margin:0 5px; cursor:pointer; }
+.nav-links a.active { color:var(--primary); }
+
+/* GRID */
+.grid {
+margin-top:80px;
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+gap:15px; padding:20px;
+}
+
+.card {
+background:var(--glass);
+padding:15px;
+border-radius:15px;
+}
+
+.price { color:var(--primary); font-weight:bold; }
+
+/* CART */
+.cart-bar {
+position:fixed; bottom:0; left:0; right:0;
+background:#111;
+padding:15px;
+padding-bottom:calc(15px + env(safe-area-inset-bottom));
+display:none;
+justify-content:space-between;
+}
+
+/* ADMIN */
+#admin-modal {
+display:none;
+position:fixed; inset:0;
+background:rgba(0,0,0,0.9);
+justify-content:center;
+align-items:center;
+}
+
+.admin-box {
+background:#111;
+padding:20px;
+border-radius:15px;
+width:90%; max-width:400px;
+}
+
+input,select {
+width:100%;
+padding:10px;
+margin-bottom:10px;
+font-size:16px;
+}
+</style>
+</head>
+
+<body>
+
+<nav>
+<div>SHARP SPORTS</div>
+<div class="nav-links">
+<a onclick="setCat('All')" id="l-all" class="active">ALL</a>
+<a onclick="setCat('Indoor')" id="l-indoor">INDOOR</a>
+<a onclick="setCat('Outdoor')" id="l-outdoor">OUTDOOR</a>
+</div>
+</nav>
+
+<div class="grid" id="product-grid"></div>
+
+<div class="cart-bar" id="cart-bar">
+<div>
+<p id="item-count"></p>
+<h4 id="total-price"></h4>
+</div>
+<button onclick="sendWhatsAppOrder()">ORDER</button>
+</div>
+
+<!-- ADMIN -->
+<div id="admin-modal">
+<div class="admin-box">
+<h3>Add Product</h3>
+<input id="name" placeholder="Name">
+<input id="price" type="number" placeholder="Price">
+<select id="cat">
+<option>Indoor</option>
+<option>Outdoor</option>
+</select>
+<button onclick="addProduct()">SAVE</button>
+<button onclick="closeAdmin()">CLOSE</button>
+</div>
+</div>
+
+<button onclick="openAdmin()" style="position:fixed;top:10px;right:10px;">⚙️</button>
+
+<script>
+
+// PRODUCTS (YOUR DATA)
+let products = JSON.parse(localStorage.getItem('ssz_items')) || [
+{ id:1,name:"English Willow Bat",p:5500,cat:"Outdoor"},
+{ id:2,name:"Fiberglass Surfboard",p:18500,cat:"Outdoor"},
+{ id:3,name:"Recurve Archery Bow",p:7200,cat:"Outdoor"},
+{ id:4,name:"Match Grade Football",p:1200,cat:"Outdoor"},
+{ id:5,name:"Football Cleats",p:2400,cat:"Outdoor"},
+{ id:6,name:"Tennis Racket (Pro)",p:4800,cat:"Outdoor"},
+{ id:7,name:"Kashmiri Willow Bat",p:2500,cat:"Outdoor"},
+{ id:8,name:"Champion Carrom Board",p:3200,cat:"Indoor"},
+{ id:9,name:"Yonex Arcsaber Racket",p:2400,cat:"Indoor"},
+{ id:10,name:"Heavy Boxing Bag",p:3800,cat:"Indoor"},
+{ id:11,name:"Tournament Chess Set",p:850,cat:"Indoor"},
+{ id:12,name:"Table Tennis Set",p:1100,cat:"Indoor"},
+{ id:13,name:"Professional Ice Skates",p:5500,cat:"Indoor"},
+{ id:14,name:"Premium Swim Gear Kit",p:1450,cat:"Indoor"},
+{ id:15,name:"Dumbbell Set",p:3800,cat:"Indoor"}
+];
+
+let cart = {};
+let currentCat="All";
+
+function render(){
+let grid=document.getElementById("product-grid");
+
+let filtered=products.filter(p=>currentCat==="All"||p.cat===currentCat);
+
+grid.innerHTML=filtered.map(p=>{
+let q=cart[p.id]||0;
+
+return `
+<div class="card">
+<h3>${p.name}</h3>
+<div class="price">₹${p.p}</div>
+
+<button onclick="updateQty(${p.id},-1)">-</button>
+${q}
+<button onclick="updateQty(${p.id},1)">+</button>
+
+</div>`;
+}).join("");
+}
+
+function updateQty(id,delta){
+if(!cart[id]) cart[id]=0;
+cart[id]+=delta;
+if(cart[id]<=0) delete cart[id];
+
+render();
+updateCart();
+}
+
+function updateCart(){
+let items=0,total=0;
+
+for(let id in cart){
+let item=products.find(p=>p.id==id);
+items+=cart[id];
+total+=item.p*cart[id];
+}
+
+let bar=document.getElementById("cart-bar");
+
+if(items>0){
+bar.style.display="flex";
+item-count.innerText=items+" items";
+total-price.innerText="₹"+total;
+}else{
+bar.style.display="none";
+}
+}
+
+function sendWhatsAppOrder(){
+let msg="Order:\n";
+for(let id in cart){
+let item=products.find(p=>p.id==id);
+msg+=item.name+" x "+cart[id]+"\n";
+}
+
+window.location.href="https://wa.me/919940330294?text="+encodeURIComponent(msg);
+}
+
+/* CATEGORY */
+function setCat(c){
+currentCat=c;
+document.querySelectorAll(".nav-links a").forEach(a=>a.classList.remove("active"));
+document.getElementById("l-"+c.toLowerCase()).classList.add("active");
+render();
+}
+
+/* ADMIN */
+function openAdmin(){
+let key=prompt("Enter Admin Key");
+if(key==="sharp77"){
+document.getElementById("admin-modal").style.display="flex";
+}
+}
+
+function closeAdmin(){
+document.getElementById("admin-modal").style.display="none";
+}
+
+function addProduct(){
+let name=document.getElementById("name").value;
+let price=parseInt(document.getElementById("price").value);
+let cat=document.getElementById("cat").value;
+
+if(name && price){
+products.push({id:Date.now(),name,p:price,cat});
+localStorage.setItem("ssz_items",JSON.stringify(products));
+render();
+closeAdmin();
+}
+}
+
+render();
+
+</script>
+
+</body>
+</html>
+```
